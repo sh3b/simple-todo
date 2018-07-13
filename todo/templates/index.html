@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+<head>
+    <title>Todo</title>
+    <meta charset="utf-8"/>
+    <style>
+        /* Center tables for demo */
+{#table {#}
+{#  margin: 0 auto;#}
+{#}#}
+
+/* Default Table Style */
+table {
+  color: #333;
+  background: white;
+  border: 1px solid grey;
+  font-size: 12pt;
+  border-collapse: collapse;
+}
+table thead th,
+table tfoot th {
+  color: #777;
+  background: rgba(0,0,0,.1);
+}
+table caption {
+  padding:.5em;
+}
+table th,
+table td {
+  padding: .5em;
+  border: 1px solid lightgrey;
+}
+/* Zebra Table Style */
+[data-table-theme*=zebra] tbody tr:nth-of-type(odd) {
+  background: rgba(0,0,0,.05);
+}
+[data-table-theme*=zebra][data-table-theme*=dark] tbody tr:nth-of-type(odd) {
+  background: rgba(255,255,255,.05);
+}
+
+    </style>
+    <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+    <script type="text/javascript">
+
+        var JSONAPI_MIMETYPE = "application/json";
+
+        (function () {
+            "use strict";
+            $(document).ready(function () {
+
+                // GET ALL
+                $("#all-button").click(function () {
+                    $("#tasks-table").html("");
+
+                    $.ajax({
+                        url: '/api/v1/todo',
+                        headers: {
+                            "Accept": JSONAPI_MIMETYPE
+                        },
+
+                        success: function (data) {
+                            var allTasks, task, taskID, taskDescription, new_row;
+                            allTasks = data.objects;
+                            for (var i = 0; i < allTasks.length; ++i) {
+
+                                task = allTasks[i];
+                                taskID = task.id;
+                                taskDescription = task.description;
+
+                                new_row = $(
+                                    "<tr>" +
+                                        "<td>" + taskID + "</td>" +
+                                        "<td>" + taskDescription + "</td>" +
+                                        "<td>" + "<a class='delete_task' id=" + taskID + ">Delete</a></td>" +
+                                        "<td>" + "<a class='update_task' data-description='"+ taskDescription + "' id=" + taskID + ">Update</a></td>" +
+                                    "</tr>");
+                                $("#tasks-table").append(new_row);
+                            }
+                        }
+                    });
+                });
+
+                // POST DATA
+                $("#add-a-todo").click(function () {
+                    var inputField = $("#new-name").val();
+                    if (inputField.length > 0) {
+                        var data = {
+                            "description": inputField
+                        };
+                        $.ajax({
+                            url:  '/api/v1/todo',
+                            data: JSON.stringify(data),
+                            headers: {
+                                "Accept": JSONAPI_MIMETYPE,
+                                "Content-Type": JSONAPI_MIMETYPE
+                            },
+
+                            method: "POST",
+
+                            success: function (data) {
+                                $("#message").text("Added " + inputField);
+                                $("#new-name").val("");
+                            },
+                            error(jqXHR) {
+                                var response = jqXHR.responseText;
+                                alert(JSON.parse(response).error);
+                            }
+                        });
+                    }
+                    else {
+                        alert("Empty input!");
+                    }
+                });
+
+                //DELETE DATA
+                $(document).on('click', 'a.delete_task', function (e) {
+                    var del_id = $(this).attr('id');
+                    $.ajax({
+                        type: 'DELETE',
+                        url:  '/api/v1/todo/' + del_id,
+                        success: function (data) {
+                          $("#all-button").click();
+                        }
+                    });
+                });
+
+                //UPDATE DATA
+                $(document).on('click', 'a.update_task', function (e) {
+                    $('.update-task').show();
+                    var description = $(this).attr("data-description");
+                    $('#update-task-field').val(description);
+                    var idn = $(this).attr('id');
+                    $('#update-task-button').attr('data-idn',idn);
+                });
+
+                $(".update_button").click(function () {
+                //$(document).on('click', 'a.update_button', function (e) {
+                    var inputField = $("#update-task-field").val();
+                    if (inputField.length > 0) {
+                        var data = {
+                            "description": inputField
+                        };
+                        $.ajax({
+                            url:  '/api/v1/todo/' + $('#update-task-button').attr('data-idn'),
+                            data: JSON.stringify(data),
+                            headers: {
+                                "Accept": JSONAPI_MIMETYPE,
+                                "Content-Type": JSONAPI_MIMETYPE
+                            },
+                            method: "PATCH",
+                            success: function (data) {
+                                $("#update-task-field").val("");
+                                $("#all-button").click();
+                                 $('.update-task').hide();
+                            },
+                        });
+                    }
+                    else {
+                        alert("Empty input!");
+
+                    }
+                });
+                $('.update-task').hide();
+            });
+        }());
+    </script>
+</head>
+<body>
+
+
+<h1>Insert</h1>
+<input type="text" id="new-name"/>
+<input type="button" id="add-a-todo" value="Add todo"/>
+
+<p id="message"></p>
+<br/>
+
+
+<h1>All Tasks</h1>
+
+<input type="button" id="all-button" value="Show All "/>
+<table id="tasks-table">
+</table>
+
+
+<div class="update-task">
+    <h3>Update Task</h3>
+    <input type="text" id="update-task-field"/>
+    <input type="button" data-idn="0" class="update_button" id="update-task-button" value="Update task"/>
+</div>
+
+
+</body>
+</html>
